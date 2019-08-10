@@ -49,6 +49,19 @@ function Install-Packer() {
     Chocolatey install --yes packer
 }
 
+function Install-Hidemaru() {
+    Chocolatey install --yes hidemaru-editor --params "'/type:64 /exit'"
+
+    # #### CAUTION: Uninstallation ####
+    #
+    # hidemaru-editor seems not to support chocolatey uninstall.
+    # Since you need to uninstall the hidemaru-editor in the program and features.
+    # Before that, you need to remove chocolatey entry with a command below:
+    # ---
+    # Chocolatey uninstall hidemaru-editor -n --skipautouninstaller
+    # ---
+}
+
 ######################################################################
 ### Process
 ######################################################################
@@ -74,6 +87,7 @@ Install-Chocolatey
 Enable-HyperV
 Install-Vagrant
 Install-Packer
+Install-Hidemaru
 
 ###
 ### Postprocess
