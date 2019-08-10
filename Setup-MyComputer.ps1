@@ -13,32 +13,40 @@ $DebugPreference = "Continue"
 ### Functions
 ######################################################################
 
-function Get-StandardPackageProviders() {
-    Get-PackageProvider -Force -Name Chocolatey
-    Get-PackageProvider -Force -Name NuGet
-
-    $ChocolateyBin = ($env:ChocolateyPath + "\bin")
-    if ($env:Path.IndexOf($ChocolateyBin) -lt 0) {
-        if ($env:Path.Substring($env:Path.Length - 1, 1) -ne ";") {
-            $env:Path += ";"
-        }
-        $env:Path += $ChocolateyBin
-        [System.Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
-    }
-}
-
 function Enable-HyperV() {
     if ((Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V)[0].State -ne "Enabled") {
         Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All
     }
 }
 
+function Install-Chocolatey() {
+    $installPath = "$env:ProgramData\Chocolatey"
+
+    if (Test-Path "$installPath" -PathType Leaf) {
+        throw "Install-Chocolatey: Same name file with Chocolatey installation folder already exists. [$installLocation]"
+    }
+    if (Test-Path "$installPath" -PathType Container) {
+        Write-Warning "***** Uninstall existing Chocolatey *****"
+        Remove-Item "$installPath" -Recurse -Force
+    }
+    New-Item "$installPath" -ItemType Directory
+
+    Write-Host "***"
+    Write-Host "*** Chocolatey Location: $installPath"
+    Write-Host "***"
+    [System.Environment]::SetEnvironmentVariable($chocInstallVariableName, "$installPath", [System.EnvironmentVariableTarget]::Machine)
+    [System.Environment]::SetEnvironmentVariable($chocInstallVariableName, "$installPath", [System.EnvironmentVariableTarget]::Process)
+
+    $webClient = New-Object System.Net.WebClient
+    $webClient.DownloadString('https://chocolatey.org/install.ps1') | Invoke-Expression
+}
+
 function Install-Vagrant() {
-    Install-Package -Name vagrant -Force
+    Chocolatey install --yes vagrant
 }
 
 function Install-Packer() {
-    Install-Package -Name packer -Force
+    Chocolatey install --yes packer
 }
 
 ######################################################################
@@ -62,7 +70,7 @@ Write-Verbose "$psName Start"
 
 Set-ExecutionPolicy RemoteSigned
 
-Get-StandardPackageProviders
+Install-Chocolatey
 Enable-HyperV
 Install-Vagrant
 Install-Packer
