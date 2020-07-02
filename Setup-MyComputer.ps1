@@ -15,8 +15,61 @@ $DebugPreference = "Continue"
 
 function Enable-HyperV() {
     if ((Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V)[0].State -ne "Enabled") {
-        Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All
+        Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All -NoRestart
     }
+}
+
+function Enable-WindowsSubsystemLinux2() {
+    if ((Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux)[0].State -ne "Enabled") {
+        
+        Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -All -NoRestart
+    }
+    if ((Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform)[0].State -ne "Enabled") {
+        
+        Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -All -NoRestart
+    }
+    wsl --set-default-version 2
+}
+
+function Update-WslKernelComponent() {
+
+    $uri = New-Object System.Uri("https://wslstorestorage.blob.core.windows.net/wslblob/wsl_update_x64.msi")
+    $file = Split-Path $uri.AbsolutePath -Leaf
+    $MsiPath = "$env:TEMP\$file"
+
+    Write-Host "*** WSL Kernel Component: Downloading: $MsiPath"
+    Invoke-WebRequest -Uri $uri -OutFile "$MsiPath" -UseBasicParsing
+    Write-Host "*** WSL Kernel Component: Completed downloading."
+
+    $Arguments = @("/c", "`"msiexec /i `"$MsiPath`" /quiet /norestart`"" )
+    $process = Start-Process -FilePath "cmd.exe" -ArgumentList $Arguments -Wait -PassThru
+    $exitCode = $process.ExitCode
+    if ($exitCode -eq 0 -or $exitCode -eq 3010)
+    {
+        Write-Host -Object "Installation successful"
+        Remove-Item "$MsiPath"
+        Write-Host -Object "Cleaned up file: `"$MsiPath`""
+    }
+    else
+    {
+        Write-Host -Object "Non zero exit code returned by the installation process : $exitCode."
+    }
+}
+
+function Install-Ubuntu2004() {
+
+    Enable-WindowsSubsystemLinux2
+    Update-WslKernelComponent
+
+    $uri = New-Object System.Uri("https://aka.ms/wslubuntu2004")
+    $appxPath = "$env:TEMP\Ubuntu_2004_x64.appx"
+
+    Write-Host "*** Ubuntu-20.04: Downloading: $appxPath"
+    Invoke-WebRequest -Uri $uri -OutFile "$appxPath" -UseBasicParsing
+    Write-Host "*** Ubuntu-20.04: Completed downloading."
+
+    Add-AppxPackage -Path "$appxPath"
+    Write-Host "*** Ubuntu-20.04: completed installation."
 }
 
 function Install-Chocolatey() {
@@ -88,6 +141,7 @@ Enable-HyperV
 Install-Vagrant
 Install-Packer
 Install-Hidemaru
+Install-Ubuntu2004
 
 ###
 ### Postprocess
