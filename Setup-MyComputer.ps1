@@ -72,7 +72,33 @@ function Install-Ubuntu2004() {
     Write-Host "*** Ubuntu-20.04: completed installation."
 }
 
+function Install-DockerWindows() {
+   $DockerURL = "https://download.docker.com/win/stable/Docker%20Desktop%20Installer.exe"
+   $exitCode = -1
+   $FilePath = "${env:Temp}\Docker Desktop Installer.exe"
+
+   Write-Host "Downloading Docker Desktop for Windows ..."
+   Remove-Item -Path "$FilePath"
+   Invoke-WebRequest -Uri "$DockerURL" -OutFile "$FilePath"
+   $process = Start-Process -FilePath "`"$FilePath`"" -ArgumentList ("install", "--quiet") -Wait -PassThru
+   $exitCode = $process.ExitCode
+   if ($exitCode -eq 0)
+   {
+       Write-Host "Installed Docker Desktop for Windows successfully." -ForegroundColor Cyan
+       return $exitCode
+   }
+   else
+   {
+       Write-Host -Object "Non zero exit code returned by the installation process : $exitCode."
+       # this wont work because of log size limitation in extension manager
+       # Get-Content $customLogFilePath | Write-Host
+       exit $exitCode
+   }
+}
+
+
 function Install-Chocolatey() {
+    $chocInstallVariableName = "ChocolateyInstall"
     $installPath = "$env:ProgramData\Chocolatey"
 
     if (Test-Path "$installPath" -PathType Leaf) {
@@ -100,6 +126,10 @@ function Install-Vagrant() {
 
 function Install-Packer() {
     Chocolatey install --yes packer
+}
+
+function Install-VsCode() {
+    Chocolatey install --yes vscode
 }
 
 function Install-Hidemaru() {
@@ -140,6 +170,7 @@ Install-Chocolatey
 Enable-HyperV
 Install-Vagrant
 Install-Packer
+Install-VsCode
 Install-Hidemaru
 Install-Ubuntu2004
 
